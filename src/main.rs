@@ -54,7 +54,7 @@ impl Opt {
         // position更新 randam or overrange確認
         match self.pos {
             Some(pos) => {
-                if metadata.len() > pos {
+                if pos > metadata.len() {
                     return Err(std::io::Error::new(
                         std::io::ErrorKind::Other,
                         format!("out of range pos={pos}, but file length={}", metadata.len()),
@@ -99,10 +99,69 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
+
+    use serde::{Deserialize, Serialize};
+    use tempdir::TempDir;
+
+    use crate::Opt;
+
     #[test]
     fn test_bit_reverse() {
         let pattern = 0b00000001_u8;
         assert_eq!(0b10000000 ^ pattern, 0b10000001);
         assert_eq!(0b11111111 ^ pattern, 0b11111110);
+    }
+
+    #[test]
+    fn test_file_reverse() -> Result<(), std::io::Error> {
+        #[derive(Debug, Serialize, Deserialize, PartialEq)]
+        struct TestData {
+            test1: String,
+            test2: Vec<u8>,
+        }
+
+        let data = TestData {
+            test1: "test1".to_string(),
+            test2: vec![1, 2, 3, 4],
+        };
+        let orig_extension = "orig";
+
+        let tmp_dir = TempDir::new("test")?;
+        let target_file = tmp_dir.path().join("target.json");
+        {
+            let tmp_file = File::create(&target_file)?;
+            serde_json::to_writer(tmp_file, &data)?;
+        }
+
+        let mut opt = Opt {
+            filepath: target_file.clone(),
+            origin: orig_extension.to_string(),
+            pos: Some(0),
+            pattern: 1,
+        };
+
+        opt.setup().unwrap();
+        opt.do_reverse()?;
+
+        {
+            let orig_file = tmp_dir.path().join(format!("target.{orig_extension}"));
+            let f = File::open(orig_file)?;
+            let orig_data: TestData = serde_json::from_reader(f).unwrap();
+            assert_eq!(data, orig_data);
+        }
+
+        {
+            let f = File::open(&target_file)?;
+            let broken_data: Result<TestData, serde_json::Error> = serde_json::from_reader(f);
+            match broken_data {
+                Ok(_) => unreachable!(),
+                Err(e) => {
+                    println!("{}", e);
+                }
+            };
+        }
+
+        Ok(())
     }
 }

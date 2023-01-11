@@ -6,10 +6,16 @@ authors = ["FUJINAKA Fumiya <uzuna.kf@gmail.com>"]
 description = "Emulate soft errors"
 license = "MIT OR Apache-2.0"
 rust-version = "1.65"
-exclude = [".github", "Makefile"]
+exclude = [".github", "Makefile", "testdata"]
+publish = false
 
 [dependencies]
 env_logger = "0.10.0"
 log = "0.4.17"
 rand = "0.8.5"
 structopt = "0.3.26"
+
+[dev-dependencies]
+serde = { version = "1.0.152", features = ["derive"] }
+serde_json = "1.0.91"
+tempdir = "0.3.7"
