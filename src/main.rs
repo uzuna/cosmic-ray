@@ -2,6 +2,12 @@ use std::{fs, os::unix::prelude::FileExt, path::PathBuf};
 
 use structopt::StructOpt;
 
+#[derive(Debug, Default, StructOpt)]
+enum Command {
+    #[default]
+    Attack,
+    Restore,
+}
 #[derive(Debug, StructOpt)]
 #[structopt(name = "cosmic-ray", about = "reverse bit")]
 struct Opt {
@@ -20,6 +26,9 @@ struct Opt {
     /// reverse bit pattern
     #[structopt(long, default_value = "1")]
     pattern: u8,
+
+    #[structopt(subcommand)] // Note that we mark a field as a subcommand
+    cmd: Command,
 }
 
 impl Opt {
@@ -27,6 +36,18 @@ impl Opt {
         let mut filepath = self.filepath.clone();
         filepath.set_extension(&self.origin);
         filepath
+    }
+
+    // 破壊されたファイルを消して、元のファイルを配置する
+    fn restore(&self) -> std::io::Result<()> {
+        let original_filepath = self.get_original_filepath();
+        let Ok(_metadata) = fs::metadata(&original_filepath) else {
+            return Ok(())
+        };
+        fs::remove_file(&self.filepath).err();
+        fs::rename(&original_filepath, &self.filepath)?;
+        log::info!("restore file {:?}", self.filepath);
+        Ok(())
     }
 
     // 書き換えが可能かどうか
@@ -78,9 +99,10 @@ impl Opt {
             .open(&self.filepath)?;
         let offset = self.pos.unwrap();
         f.read_at(&mut buf, offset)?;
+        let before = buf[0];
         log::debug!("read {} is {:#b}", offset, buf[0]);
         buf[0] ^= self.pattern;
-        log::debug!("write {} is {:#b}", offset, buf[0]);
+        log::info!("write {} is {:#b} from {:#b}", offset, buf[0], before);
         f.write_at(&buf, offset)?;
         Ok(())
     }
@@ -92,9 +114,14 @@ fn main() {
     );
 
     let mut opt = Opt::from_args();
-    opt.setup().unwrap();
-    log::debug!("success setup");
-    opt.do_reverse().unwrap();
+    match opt.cmd {
+        Command::Attack => {
+            opt.setup().unwrap();
+            log::debug!("success setup");
+            opt.do_reverse().unwrap()
+        }
+        Command::Restore => opt.restore().unwrap(),
+    }
 }
 
 #[cfg(test)]
@@ -114,7 +141,7 @@ mod tests {
     }
 
     #[test]
-    fn test_file_reverse() -> Result<(), std::io::Error> {
+    fn test_file_reverse_restore() -> Result<(), std::io::Error> {
         #[derive(Debug, Serialize, Deserialize, PartialEq)]
         struct TestData {
             test1: String,
@@ -139,11 +166,13 @@ mod tests {
             origin: orig_extension.to_string(),
             pos: Some(0),
             pattern: 1,
+            cmd: crate::Command::Attack,
         };
 
         opt.setup().unwrap();
         opt.do_reverse()?;
 
+        // オリジナルは読めて、以前のなまrのファイルには破壊されたデータがある
         {
             let orig_file = tmp_dir.path().join(format!("target.{orig_extension}"));
             let f = File::open(orig_file)?;
@@ -160,6 +189,14 @@ mod tests {
                     println!("{}", e);
                 }
             };
+        }
+
+        opt.restore()?;
+        // オリジナルに戻っていること
+        {
+            let f = File::open(&target_file)?;
+            let orig_data: TestData = serde_json::from_reader(f).unwrap();
+            assert_eq!(data, orig_data);
         }
 
         Ok(())
