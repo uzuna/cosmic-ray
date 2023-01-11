@@ -1,8 +1,4 @@
-use std::{
-    fs::{self, File},
-    os::unix::prelude::FileExt,
-    path::PathBuf,
-};
+use std::{fs, os::unix::prelude::FileExt, path::PathBuf};
 
 use structopt::StructOpt;
 
@@ -14,7 +10,7 @@ struct Opt {
     filepath: PathBuf,
 
     /// backup original file extension
-    #[structopt(long, default_value = ".orig")]
+    #[structopt(long, default_value = "orig")]
     origin: String,
 
     /// reverse byte address
@@ -28,7 +24,9 @@ struct Opt {
 
 impl Opt {
     fn get_original_filepath(&self) -> PathBuf {
-        self.filepath.join(&self.origin)
+        let mut filepath = self.filepath.clone();
+        filepath.set_extension(&self.origin);
+        filepath
     }
 
     // 書き換えが可能かどうか
@@ -41,6 +39,7 @@ impl Opt {
             Err(_) => {
                 let metadata = fs::metadata(&self.filepath)?;
                 fs::copy(&self.filepath, &original_filepath)?;
+                log::info!("backup original file {:?}", &original_filepath);
                 metadata
             }
             Ok(metadata) => {
@@ -72,18 +71,29 @@ impl Opt {
 
     fn do_reverse(&self) -> std::io::Result<()> {
         let mut buf = [0_u8];
-        let f = File::open(&self.filepath)?;
+        log::debug!("open {:?}", &self.filepath);
+        let f = std::fs::OpenOptions::new()
+            .write(true)
+            .read(true)
+            .open(&self.filepath)?;
         let offset = self.pos.unwrap();
         f.read_at(&mut buf, offset)?;
+        log::debug!("read {} is {:#b}", offset, buf[0]);
         buf[0] ^= self.pattern;
+        log::debug!("write {} is {:#b}", offset, buf[0]);
         f.write_at(&buf, offset)?;
         Ok(())
     }
 }
 
 fn main() {
+    env_logger::init_from_env(
+        env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"),
+    );
+
     let mut opt = Opt::from_args();
     opt.setup().unwrap();
+    log::debug!("success setup");
     opt.do_reverse().unwrap();
 }
 
