@@ -203,8 +203,14 @@ impl RayBox {
     pub fn is_damaged(&self) -> bool {
         !self.rays.is_empty()
     }
+
+    pub fn into_inner(x: Self) -> Vec<u8> {
+        let Self { data, .. } = x;
+        data
+    }
 }
 
+// バイト列比較のため
 impl Deref for RayBox {
     type Target = Vec<u8>;
 
@@ -329,6 +335,8 @@ mod tests {
             raybox.restore();
         }
         assert_eq!(&*raybox, &reference);
+        let buf = RayBox::into_inner(raybox);
+        assert_eq!(&buf, &reference);
         Ok(())
     }
 }
