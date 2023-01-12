@@ -4,7 +4,7 @@
 
 ## Usage
 
-- 任意のファイルの特定のビットを反転させる(アドレス指定、ランダム)
+### binary
 
 ```sh
 # attack
@@ -15,4 +15,19 @@ cosmic-ray testdata/dummy.json attack
 # restore
 cosmic-ray testdata/dummy.json restore
 [2023-01-11T08:38:21Z INFO  cosmic_ray] restore file "testdata/dummy.json"
+```
+
+### library
+
+```rust
+use cosmic_ray::{RayBoxVec, Ray};
+
+let buf = vec![0_u8; 12];
+let reference = buf.clone();
+
+let mut raybox = RayBoxVec::new(buf);
+raybox.attack(Ray::new(0)).unwrap();
+assert_ne!(&*raybox, &reference);
+raybox.restore();
+assert_eq!(&*raybox, &reference);
 ```

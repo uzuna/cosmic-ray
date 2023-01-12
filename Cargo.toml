@@ -1,25 +1,37 @@
 [package]
 name = "cosmic-ray"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["FUJINAKA Fumiya <uzuna.kf@gmail.com>"]
 description = "Emulate soft errors"
 license = "MIT OR Apache-2.0"
 rust-version = "1.65"
-exclude = [".github", "Makefile", "testdata"]
-publish = false
+exclude = [".github", "Makefile", "testdata", ".vscode", "src/bin"]
+readme = "README.md"
+keywords = ["soft-error"]
+repository = "https://github.com/uzuna/cosmic-ray"
 
 [dependencies]
-env_logger = "0.10.0"
-log = "0.4.17"
-rand = "0.8.5"
-structopt = "0.3.26"
 thiserror = "1.0.38"
+
+env_logger = { version = "0.10.0", optional = true }
+log = { version = "0.4.17", optional = true }
+rand = { version = "0.8.5", optional = true }
+structopt = { version = "0.3.26", optional = true }
 
 [dev-dependencies]
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.91"
 tempdir = "0.3.7"
+
+[features]
+default = []
+build-binary = ["env_logger", "log", "rand", "structopt"]
+
+[[bin]]
+name = "cosmic-ray"
+path = "src/bin/main.rs"
+required-features = ["build-binary"]
 
 [profile.release]
 strip = true
