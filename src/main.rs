@@ -1,4 +1,10 @@
-use std::{fs, ops::Deref, os::unix::prelude::FileExt, path::PathBuf};
+use std::{
+    fs,
+    io::{Read, Seek, SeekFrom, Write},
+    ops::Deref,
+    os::unix::prelude::FileExt,
+    path::PathBuf,
+};
 
 use structopt::StructOpt;
 
@@ -124,9 +130,12 @@ fn main() {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("ray position is out of range")]
     OutOfRange,
+    #[error("io error")]
+    IO(#[from] std::io::Error),
 }
 
 pub struct Ray {
@@ -154,6 +163,13 @@ impl Ray {
     pub fn with_pattern(offset: usize, pattern: u8) -> Self {
         Self { offset, pattern }
     }
+
+    fn zero(&self) -> Self {
+        Self {
+            offset: 0,
+            pattern: self.pattern,
+        }
+    }
 }
 
 pub fn affect(buf: &mut [u8], pat: &Ray) -> Result<(), Error> {
@@ -162,12 +178,12 @@ pub fn affect(buf: &mut [u8], pat: &Ray) -> Result<(), Error> {
     Ok(())
 }
 
-pub struct RayBox {
+pub struct RayBoxVec {
     data: Vec<u8>,
     rays: Vec<Ray>,
 }
 
-impl RayBox {
+impl RayBoxVec {
     pub fn new(data: Vec<u8>) -> Self {
         Self { data, rays: vec![] }
     }
@@ -211,8 +227,74 @@ impl RayBox {
 }
 
 // バイト列比較のため
-impl Deref for RayBox {
+impl Deref for RayBoxVec {
     type Target = Vec<u8>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
+pub struct RayBoxFile<T> {
+    data: T,
+    rays: Vec<Ray>,
+}
+
+impl<T> RayBoxFile<T>
+where
+    T: Read + Write + Seek,
+{
+    pub fn new(data: T) -> Self {
+        Self { data, rays: vec![] }
+    }
+
+    #[inline]
+    fn affect(&mut self, ray: &Ray) -> Result<(), Error> {
+        let mut buf = [0_u8];
+        let z_ray = ray.zero();
+        self.data.seek(SeekFrom::Start(ray.offset as u64))?;
+        let _pos = self.data.read(&mut buf)?;
+        affect(&mut buf, &z_ray)?;
+        self.data.seek(SeekFrom::Start(ray.offset as u64))?;
+        let _pos = self.data.write(&buf)?;
+        Ok(())
+    }
+
+    pub fn attack(&mut self, ray: Ray) -> Result<(), Error> {
+        self.affect(&ray)?;
+        self.rays.push(ray);
+        Ok(())
+    }
+
+    pub fn restore(&mut self) -> Option<Ray> {
+        if let Some(ray) = self.rays.pop() {
+            // attackが通ったなら通常は確実に通るのでチェックしない
+            self.affect(&ray).unwrap();
+            Some(ray)
+        } else {
+            None
+        }
+    }
+
+    pub fn restore_all(&mut self) {
+        let rays: Vec<Ray> = self.rays.drain(0..).collect();
+        for ray in rays.iter().rev() {
+            self.affect(ray).unwrap();
+        }
+    }
+
+    #[inline]
+    pub fn is_damaged(&self) -> bool {
+        !self.rays.is_empty()
+    }
+    pub fn into_inner(x: Self) -> T {
+        let Self { data, .. } = x;
+        data
+    }
+}
+
+impl<T> Deref for RayBoxFile<T> {
+    type Target = T;
 
     fn deref(&self) -> &Self::Target {
         &self.data
@@ -221,12 +303,18 @@ impl Deref for RayBox {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::File;
+    use std::{fs::File, io::Write, ops::Deref};
 
     use serde::{Deserialize, Serialize};
     use tempdir::TempDir;
 
-    use crate::{affect, Error, Opt, Ray, RayBox};
+    use crate::{affect, Error, Opt, Ray, RayBoxFile, RayBoxVec};
+
+    #[derive(Debug, Serialize, Deserialize, PartialEq)]
+    struct TestData {
+        test1: String,
+        test2: Vec<u8>,
+    }
 
     #[test]
     fn test_bit_reverse() {
@@ -237,12 +325,6 @@ mod tests {
 
     #[test]
     fn test_file_reverse_restore() -> Result<(), std::io::Error> {
-        #[derive(Debug, Serialize, Deserialize, PartialEq)]
-        struct TestData {
-            test1: String,
-            test2: Vec<u8>,
-        }
-
         let data = TestData {
             test1: "test1".to_string(),
             test2: vec![1, 2, 3, 4],
@@ -315,7 +397,7 @@ mod tests {
         let buf = vec![0_u8; 12];
         let reference = buf.clone();
 
-        let mut raybox = RayBox::new(buf);
+        let mut raybox = RayBoxVec::new(buf);
         assert_eq!(&*raybox, &reference);
 
         for ray in [
@@ -335,8 +417,50 @@ mod tests {
             raybox.restore();
         }
         assert_eq!(&*raybox, &reference);
-        let buf = RayBox::into_inner(raybox);
+        let buf = RayBoxVec::into_inner(raybox);
         assert_eq!(&buf, &reference);
+        Ok(())
+    }
+
+    #[test]
+    fn test_rayboxfile() -> Result<(), Error> {
+        let data = TestData {
+            test1: "test1".to_string(),
+            test2: vec![1, 2, 3, 4],
+        };
+        let tmp_dir = TempDir::new("test")?;
+        let target_file = tmp_dir.path().join("target.json");
+        let reference_buf = {
+            let tmp_file = File::create(&target_file)?;
+            serde_json::to_writer(tmp_file, &data).unwrap();
+            serde_json::to_vec(&data).unwrap()
+        };
+
+        let f = std::fs::OpenOptions::new()
+            .write(true)
+            .read(true)
+            .open(&target_file)?;
+        let mut raybox = RayBoxFile::new(f);
+
+        for ray in [
+            Ray::with_pattern(0, Ray::P0BIT),
+            Ray::with_pattern(2, Ray::P1BIT),
+            Ray::with_pattern(4, Ray::P2BIT),
+            Ray::with_pattern(5, Ray::P3BIT),
+            Ray::with_pattern(6, Ray::P4BIT),
+            Ray::with_pattern(7, Ray::P5BIT),
+            Ray::with_pattern(10, Ray::P6BIT),
+            Ray::with_pattern(11, Ray::P7BIT),
+        ] {
+            raybox.attack(ray)?;
+        }
+        raybox.deref().flush().unwrap();
+        let edited_byte = std::fs::read(&target_file)?;
+        assert_ne!(&*edited_byte, &reference_buf);
+        raybox.restore_all();
+        drop(raybox);
+        let restored_byte = std::fs::read(&target_file)?;
+        assert_eq!(&restored_byte, &reference_buf);
         Ok(())
     }
 }
