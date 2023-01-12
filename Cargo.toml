@@ -25,3 +25,16 @@ strip = true
 opt-level = "z"
 lto = true
 codegen-units = 1
+
+[package.metadata.deb]
+maintainer = "FUJINAKA Fumiya <uzuna.kf@gmail.com>"
+copyright = "2023, FUJINAKA Fumiya <uzuna.kf@gmail.com>"
+license-file = ["LICENSE", "4"]
+extended-description = "Emulate soft errors."
+depends = "$auto"
+section = "utility"
+priority = "optional"
+assets = [
+    ["target/release/cosmic-ray", "usr/local/bin/", "755"],
+    ["README.md", "usr/share/doc/cosmic-ray/README", "644"],
+]

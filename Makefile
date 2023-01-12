@@ -8,3 +8,7 @@ fmt:
 check-fmt:
 	cargo fmt --check
 	cargo clippy
+
+.PHONY: deb
+deb:
+	cargo deb

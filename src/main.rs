@@ -1,4 +1,4 @@
-use std::{fs, os::unix::prelude::FileExt, path::PathBuf};
+use std::{fs, ops::Deref, os::unix::prelude::FileExt, path::PathBuf};
 
 use structopt::StructOpt;
 
@@ -124,6 +124,95 @@ fn main() {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Error {
+    OutOfRange,
+}
+
+pub struct Ray {
+    pub offset: usize,
+    pub pattern: u8,
+}
+
+impl Ray {
+    pub const P0BIT: u8 = 0b00000001;
+    pub const P1BIT: u8 = 0b00000010;
+    pub const P2BIT: u8 = 0b00000100;
+    pub const P3BIT: u8 = 0b00001000;
+    pub const P4BIT: u8 = 0b00010000;
+    pub const P5BIT: u8 = 0b00100000;
+    pub const P6BIT: u8 = 0b01000000;
+    pub const P7BIT: u8 = 0b10000000;
+
+    pub fn new(offset: usize) -> Self {
+        Self {
+            offset,
+            pattern: Self::P0BIT,
+        }
+    }
+
+    pub fn with_pattern(offset: usize, pattern: u8) -> Self {
+        Self { offset, pattern }
+    }
+}
+
+pub fn affect(buf: &mut [u8], pat: &Ray) -> Result<(), Error> {
+    let data = buf.get_mut(pat.offset).ok_or(Error::OutOfRange)?;
+    *data ^= pat.pattern;
+    Ok(())
+}
+
+pub struct RayBox {
+    data: Vec<u8>,
+    rays: Vec<Ray>,
+}
+
+impl RayBox {
+    pub fn new(data: Vec<u8>) -> Self {
+        Self { data, rays: vec![] }
+    }
+
+    pub fn attack(&mut self, ray: Ray) -> Result<(), Error> {
+        affect(&mut self.data, &ray)?;
+        self.rays.push(ray);
+        Ok(())
+    }
+
+    pub fn restore(&mut self) -> Option<Ray> {
+        if let Some(ray) = self.rays.pop() {
+            // attackが通ったなら通常は確実に通るのでチェックしない
+            unsafe {
+                affect(&mut self.data, &ray).unwrap_unchecked();
+            }
+            Some(ray)
+        } else {
+            None
+        }
+    }
+
+    pub fn restore_all(&mut self) {
+        for ray in self.rays.iter().rev() {
+            unsafe {
+                affect(&mut self.data, ray).unwrap_unchecked();
+            }
+        }
+        self.rays.clear();
+    }
+
+    #[inline]
+    pub fn is_damaged(&self) -> bool {
+        !self.rays.is_empty()
+    }
+}
+
+impl Deref for RayBox {
+    type Target = Vec<u8>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs::File;
@@ -131,7 +220,7 @@ mod tests {
     use serde::{Deserialize, Serialize};
     use tempdir::TempDir;
 
-    use crate::Opt;
+    use crate::{affect, Error, Opt, Ray, RayBox};
 
     #[test]
     fn test_bit_reverse() {
@@ -199,6 +288,47 @@ mod tests {
             assert_eq!(data, orig_data);
         }
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_bytes() -> Result<(), Error> {
+        let mut buf = vec![0_u8; 12];
+        let reference = buf.clone();
+
+        let ray = Ray::new(0);
+        affect(&mut buf, &ray)?;
+        assert_ne!(&buf, &reference);
+        affect(&mut buf, &ray)?;
+        assert_eq!(&buf, &reference);
+        Ok(())
+    }
+
+    #[test]
+    fn test_raybox() -> Result<(), Error> {
+        let buf = vec![0_u8; 12];
+        let reference = buf.clone();
+
+        let mut raybox = RayBox::new(buf);
+        assert_eq!(&*raybox, &reference);
+
+        for ray in [
+            Ray::with_pattern(0, Ray::P0BIT),
+            Ray::with_pattern(2, Ray::P1BIT),
+            Ray::with_pattern(4, Ray::P2BIT),
+            Ray::with_pattern(5, Ray::P3BIT),
+            Ray::with_pattern(6, Ray::P4BIT),
+            Ray::with_pattern(7, Ray::P5BIT),
+            Ray::with_pattern(10, Ray::P6BIT),
+            Ray::with_pattern(11, Ray::P7BIT),
+        ] {
+            raybox.attack(ray)?;
+        }
+        while raybox.is_damaged() {
+            assert_ne!(&*raybox, &reference);
+            raybox.restore();
+        }
+        assert_eq!(&*raybox, &reference);
         Ok(())
     }
 }
