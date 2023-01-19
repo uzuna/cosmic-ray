@@ -35,6 +35,14 @@ impl ByteBox {
         let elements = value.as_bytes().to_vec();
         Ok(Self { elements })
     }
+
+    fn raw<'p>(&'p self) ->&'p [u8] {
+        &self.elements
+    }
+
+    fn reference<'p>(&'p self, py: Python<'p>) ->&'p PyBytes {
+        PyBytes::new(py, &self.elements)
+    }
 }
 
 // impl FromPyObject<'_> for ByteBox {

@@ -10,4 +10,6 @@ def test_number():
 def test_bytebox():
     b = ByteBox(b'\x7f\x45\x4c\x46\x01\x01\x01\x00')
     print(b.elements)
+    print(b.raw())
+    print(b.reference())
 
