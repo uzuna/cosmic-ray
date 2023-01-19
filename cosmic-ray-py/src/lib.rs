@@ -1,4 +1,9 @@
-use pyo3::{exceptions::PyValueError, prelude::*, types::PyBytes};
+use cosmic_ray;
+use pyo3::{
+    exceptions::PyValueError,
+    prelude::*,
+    types::{PyByteArray, PyBytes},
+};
 
 #[pyclass]
 struct Number(i32);
@@ -36,37 +41,29 @@ impl ByteBox {
         Ok(Self { elements })
     }
 
-    fn raw<'p>(&'p self) ->&'p [u8] {
+    fn raw<'p>(&'p self) -> &'p [u8] {
         &self.elements
     }
 
-    fn reference<'p>(&'p self, py: Python<'p>) ->&'p PyBytes {
+    fn reference<'p>(&'p self, py: Python<'p>) -> &'p PyBytes {
         PyBytes::new(py, &self.elements)
     }
 }
 
-// impl FromPyObject<'_> for ByteBox {
-//     fn extract(ob: &PyAny) -> PyResult<Self> {
-//         let byte: &PyBytes = ob.downcast()?;
-//         let elements = byte.as_bytes().to_vec();
-//         Ok(Self{elements})
-//     }
-// }
-
-// #[pyproto]
-// impl PySequenceProtocol for ByteBox {
-//     fn __concat__(&self, other: PyRef<'p, Self>) -> PyResult<Self> {
-//         let mut elements = self.elements.clone();
-//         elements.extend_from_slice(&other.elements);
-//         Ok(Self { elements })
-//     }
-// }
+#[pyfunction]
+fn affect(buf: &PyByteArray) -> PyResult<()> {
+    cosmic_ray::affect(unsafe { buf.as_bytes_mut() }, &cosmic_ray::Ray::new(0))
+        .map_err(|e| PyValueError::new_err(format!("{}", e)))?;
+    Ok(())
+}
 
 // moduleの実装定義
 // 関数名はmoduke名にするか #[pyo3(name = "custom_name")] で指定する
 #[pymodule]
-fn cosmic_ray(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
+#[pyo3(name = "cosmic_ray")]
+fn extention(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<Number>()?;
     m.add_class::<ByteBox>()?;
+    m.add_function(wrap_pyfunction!(affect, m)?)?;
     Ok(())
 }

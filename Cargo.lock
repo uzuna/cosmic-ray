@@ -88,6 +88,7 @@ dependencies = [
 name = "cosmic-ray-py"
 version = "0.1.0"
 dependencies = [
+ "cosmic-ray",
  "pyo3",
 ]
 
