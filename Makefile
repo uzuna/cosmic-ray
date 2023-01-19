@@ -20,3 +20,7 @@ build:
 .PHONY: deb
 deb: build
 	cargo deb -- --features build-binary
+
+.PHONY: setup.py
+setup.py:
+	pip install maturin
