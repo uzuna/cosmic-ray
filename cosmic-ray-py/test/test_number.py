@@ -1,4 +1,4 @@
-from cosmic_ray import RayBox, Ray
+from cosmic_ray_py import RayBox, Ray
 
 
 def test_raybox():

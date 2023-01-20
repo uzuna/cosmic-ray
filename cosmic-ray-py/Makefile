@@ -17,4 +17,4 @@ test: build.dev
 
 .PHONY: fmt
 fmt:
-	black test cosmic_ray.pyi
+	black test *.pyi

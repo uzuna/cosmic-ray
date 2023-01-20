@@ -129,7 +129,7 @@ fn affect(buf: &PyByteArray, ray: &cosmic_ray::Ray) -> PyResult<()> {
 // moduleの実装定義
 // 関数名はmodule名にするか #[pyo3(name = "custom_name")] で指定する
 #[pymodule]
-#[pyo3(name = "cosmic_ray")]
+#[pyo3(name = "cosmic_ray_py")]
 fn extention(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<RayBox>()?;
     m.add_class::<Ray>()?;
