@@ -24,7 +24,7 @@ def test_raybox():
     assert text2 == b"uest_text"
 
     # ランダムに書き換え
-    rb.attack_rand(text2)
+    rb.attack_random(text2)
     assert text2 != b"uest_text"
 
     # データを元に戻す
