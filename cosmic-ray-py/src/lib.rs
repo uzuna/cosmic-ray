@@ -88,7 +88,7 @@ impl RayBox {
     }
 
     /// ランダムなアドレスを反転させる
-    fn attack_rand(&mut self, buf: &PyByteArray) -> PyResult<()> {
+    fn attack_random(&mut self, buf: &PyByteArray) -> PyResult<()> {
         let max = unsafe { buf.as_bytes().len() };
         let mut rng = rand::thread_rng();
         let offset = rng.gen_range(0..max);
@@ -99,7 +99,7 @@ impl RayBox {
     }
 
     /// ランダムなアドレスのどこかのビットを反転させる
-    fn attack_rand_pattern(&mut self, buf: &PyByteArray) -> PyResult<()> {
+    fn attack_randam_with_pattern(&mut self, buf: &PyByteArray) -> PyResult<()> {
         let max = unsafe { buf.as_bytes().len() };
         let mut rng = rand::thread_rng();
         let offset = rng.gen_range(0..max);

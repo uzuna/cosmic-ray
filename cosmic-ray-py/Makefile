@@ -7,10 +7,14 @@ setup.py:
 build.dev:
 	maturin develop
 
+.PHONY: build
+build:
+	maturin build
+
 .PHONY: test
 test: build.dev
 	pytest test --capture=no
 
 .PHONY: fmt
 fmt:
-	black test
+	black test cosmic_ray.pyi

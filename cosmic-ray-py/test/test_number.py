@@ -12,7 +12,7 @@ def test_raybox():
     # t=01110100
     # u=01110101
     assert text2 == b"uest_text"
-    rb.attack_rand(text2)
+    rb.attack_random(text2)
     assert text2 != b"uest_text"
     rb.restore(text2)
     assert text2 == text
