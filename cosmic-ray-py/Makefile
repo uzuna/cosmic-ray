@@ -15,6 +15,10 @@ whl:
 test: build.dev
 	pytest test --capture=no
 
+.PHONY: bench
+bench: build.dev
+	pytest bench --benchmark-compare
+
 .PHONY: fmt
 fmt:
-	black test *.pyi
+	black test bench *.pyi

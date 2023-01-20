@@ -87,6 +87,14 @@ impl RayBox {
         Ok(())
     }
 
+    /// 指定アドレスをビット反転させる
+    fn attack_offset(&mut self, buf: &PyByteArray, offset: usize) -> PyResult<()> {
+        let ray = cosmic_ray::Ray::new(offset);
+        affect(buf, &ray)?;
+        self.history.push(ray);
+        Ok(())
+    }
+
     /// ランダムなアドレスを反転させる
     fn attack_random(&mut self, buf: &PyByteArray) -> PyResult<()> {
         let max = unsafe { buf.as_bytes().len() };
