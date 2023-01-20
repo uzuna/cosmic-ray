@@ -7,8 +7,8 @@ setup.py:
 build.dev:
 	maturin develop
 
-.PHONY: build
-build:
+.PHONY: whl
+whl:
 	maturin build
 
 .PHONY: test

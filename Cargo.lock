@@ -85,7 +85,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cosmic-ray-py"
+name = "cosmic_ray"
 version = "0.2.0"
 dependencies = [
  "cosmic-ray",

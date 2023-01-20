@@ -1,5 +1,5 @@
 [package]
-name = "cosmic-ray-py"
+name = "cosmic_ray"
 version = "0.2.0"
 edition = "2021"
 authors = ["FUJINAKA Fumiya <uzuna.kf@gmail.com>"]
