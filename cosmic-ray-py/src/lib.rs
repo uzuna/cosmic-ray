@@ -47,18 +47,27 @@ use rand::Rng;
 //     }
 // }
 
+/// Information about which bit at which position to invert
 #[pyclass]
 #[repr(transparent)]
 struct Ray(cosmic_ray::Ray);
 
 #[pymethods]
 impl Ray {
+    /// アドレス指定して1ビット反転させる
     #[new]
     fn py_new(offset: usize) -> Self {
         Ray(cosmic_ray::Ray::new(offset))
     }
+
+    /// アドレスとビットパターンを指定してビット反転させる
+    #[staticmethod]
+    fn with_pattern(offset: usize, pattern: u8) -> Self {
+        Ray(cosmic_ray::Ray::with_pattern(offset, pattern))
+    }
 }
 
+/// バッファの操作記録を保持する構造体
 #[pyclass]
 struct RayBox {
     history: Vec<cosmic_ray::Ray>,
@@ -71,12 +80,14 @@ impl RayBox {
         Self { history: vec![] }
     }
 
+    /// 指定したパターンでビット反転させる
     fn attack(&mut self, buf: &PyByteArray, ray: &Ray) -> PyResult<()> {
         affect(buf, &ray.0)?;
         self.history.push(ray.0.clone());
         Ok(())
     }
 
+    /// ランダムなアドレスを反転させる
     fn attack_rand(&mut self, buf: &PyByteArray) -> PyResult<()> {
         let max = unsafe { buf.as_bytes().len() };
         let mut rng = rand::thread_rng();
@@ -87,6 +98,19 @@ impl RayBox {
         Ok(())
     }
 
+    /// ランダムなアドレスのどこかのビットを反転させる
+    fn attack_rand_pattern(&mut self, buf: &PyByteArray) -> PyResult<()> {
+        let max = unsafe { buf.as_bytes().len() };
+        let mut rng = rand::thread_rng();
+        let offset = rng.gen_range(0..max);
+        let pattern = 2_u8.pow(rng.gen_range(0..=8));
+        let ray = cosmic_ray::Ray::with_pattern(offset, pattern);
+        affect(buf, &ray)?;
+        self.history.push(ray);
+        Ok(())
+    }
+
+    /// 元のバイト列に戻す
     fn restore(&mut self, buf: &PyByteArray) -> PyResult<()> {
         for ray in self.history.iter().rev() {
             affect(buf, ray)?;
