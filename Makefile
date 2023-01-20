@@ -1,6 +1,6 @@
 PHONY: fmt
 fmt:
-	cargo fmt --all
+	cargo fmt
 	git add -u
 	cargo clippy --fix --allow-staged --all-features
 
@@ -20,3 +20,7 @@ build:
 .PHONY: deb
 deb: build
 	cargo deb -- --features build-binary
+
+.PHONY: setup.py
+setup.py:
+	pip install maturin

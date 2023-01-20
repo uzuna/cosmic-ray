@@ -1,3 +1,9 @@
+[workspace]
+
+members = [
+    "cosmic-ray-py"
+]
+
 [package]
 name = "cosmic-ray"
 version = "0.2.0"
