@@ -1,4 +1,8 @@
 
+.PHONY: setup.py
+setup.py:
+	pip install maturin pytest
+
 .PHONY: build.dev
 build.dev:
 	maturin develop

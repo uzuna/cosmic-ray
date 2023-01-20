@@ -86,10 +86,11 @@ dependencies = [
 
 [[package]]
 name = "cosmic-ray-py"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cosmic-ray",
  "pyo3",
+ "rand 0.8.5",
 ]
 
 [[package]]

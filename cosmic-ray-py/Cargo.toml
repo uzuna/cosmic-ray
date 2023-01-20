@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-ray-py"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["FUJINAKA Fumiya <uzuna.kf@gmail.com>"]
 description = "Emulate soft errors python binding"
@@ -19,3 +19,4 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = { version = "0.18.0", features = ["extension-module"] }
 cosmic-ray = { package = "cosmic-ray", path = "../" }
+rand = "0.8.5"

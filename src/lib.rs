@@ -33,6 +33,7 @@ pub enum Error {
 }
 
 /// Information about which bit at which position to invert
+#[derive(Debug, Clone, Copy)]
 pub struct Ray {
     pub offset: usize,
     pub pattern: u8,
