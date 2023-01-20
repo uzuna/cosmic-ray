@@ -29,6 +29,7 @@ structopt = { version = "0.3.26", optional = true }
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.91"
 tempdir = "0.3.7"
+criterion = "0.3"
 
 [features]
 default = []
@@ -38,6 +39,10 @@ build-binary = ["env_logger", "log", "rand", "structopt"]
 name = "cosmic-ray"
 path = "src/bin/main.rs"
 required-features = ["build-binary"]
+
+[[bench]]
+name = "bench"
+harness = false
 
 [profile.release]
 strip = true

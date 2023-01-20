@@ -203,6 +203,26 @@ impl<T> Deref for RayBoxFile<T> {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct RayBox {
+    rays: Vec<Ray>,
+}
+
+impl RayBox {
+    pub fn attack(&mut self, buf: &mut [u8], ray: Ray) -> Result<u8, Error> {
+        let result = affect(buf, &ray)?;
+        self.rays.push(ray);
+        Ok(result)
+    }
+    pub fn restore_all(&mut self, buf: &mut [u8]) -> Result<(), Error> {
+        let rays: Vec<Ray> = self.rays.drain(0..).collect();
+        for ray in rays.iter().rev() {
+            affect(buf, ray)?;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{fs::File, io::Write, ops::Deref};

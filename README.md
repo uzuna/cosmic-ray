@@ -31,3 +31,23 @@ assert_ne!(&*raybox, &reference);
 raybox.restore();
 assert_eq!(&*raybox, &reference);
 ```
+
+
+## Performance
+
+```txt
+attack 20 times and restore                                                                            
+                        time:   [348.56 ns 349.19 ns 349.90 ns]
+Found 13 outliers among 100 measurements (13.00%)
+  1 (1.00%) low severe
+  2 (2.00%) low mild
+  6 (6.00%) high mild
+  4 (4.00%) high severe
+
+attack 20 times and restore use Vec                                                                             
+                        time:   [647.38 ns 648.14 ns 648.90 ns]
+Found 6 outliers among 100 measurements (6.00%)
+  1 (1.00%) low mild
+  1 (1.00%) high mild
+  4 (4.00%) high severe
+```
