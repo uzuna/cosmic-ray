@@ -6,7 +6,7 @@ members = [
 
 [package]
 name = "cosmic-ray"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["FUJINAKA Fumiya <uzuna.kf@gmail.com>"]
 description = "Emulate soft errors"
