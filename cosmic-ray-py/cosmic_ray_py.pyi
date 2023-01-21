@@ -38,6 +38,14 @@ class RayBox:
         :param ray: attack offset and pattern
         """
         pass
+    def attack_offset(self, buf: bytearray, offset: int) -> None:
+        """
+        attack buffer by ray
+
+        :param buf: target buffer
+        :param offset: attack offset
+        """
+        pass
     def attack_random(self, buf: bytearray) -> None:
         """
         attack buffer by random ray

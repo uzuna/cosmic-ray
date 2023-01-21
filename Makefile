@@ -13,6 +13,10 @@ check-fmt:
 test:
 	cargo test --all-features
 
+.PHONY: bench
+bench:
+	cargo bench --verbose
+
 .PHONY: build
 build:
 	cargo build --release 
